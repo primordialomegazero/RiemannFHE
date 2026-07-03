@@ -69,7 +69,7 @@ void benchmark_single_key() {
     t_start = high_resolution_clock::now();
     for (int i = 0; i < ITERS; i++) {
         auto t0 = high_resolution_clock::now();
-        volatile double dec = fhe.decrypt(ct_base);
+        volatile double dec __attribute__((unused)) = fhe.decrypt(ct_base);
         auto t1 = high_resolution_clock::now();
         dec_times.push_back(duration_cast<nanoseconds>(t1 - t0).count() / 1000.0);
     }
@@ -242,7 +242,7 @@ void benchmark_multi_key() {
     t_start = high_resolution_clock::now();
     for (int i = 0; i < ITERS; i++) {
         auto t0 = high_resolution_clock::now();
-        volatile double dec = fhe.decrypt(ct_base);
+        volatile double dec __attribute__((unused)) = fhe.decrypt(ct_base);
         auto t1 = high_resolution_clock::now();
         dec_times.push_back(duration_cast<nanoseconds>(t1 - t0).count() / 1000.0);
     }

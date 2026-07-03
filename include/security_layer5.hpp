@@ -43,7 +43,7 @@ struct LWEAttackSimulator {
         // Check if value can be expressed as root of polynomial
         // with integer coefficients
         for (int d = 1; d <= max_degree; d++) {
-            double x = value;
+            double x __attribute__((unused)) = value;
             // Try small integer coefficients
             for (int a = -10; a <= 10; a++) {
                 double poly = a;

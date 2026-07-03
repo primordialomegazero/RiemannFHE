@@ -147,7 +147,7 @@ int main() {
     
     auto t1 = std::chrono::high_resolution_clock::now();
     for (int i = 0; i < ITERS; i++) {
-        volatile auto c = rhe.encrypt((double)i, i % 150);
+        volatile auto c __attribute__((unused)) = rhe.encrypt((double)i, i % 150);
     }
     auto t2 = std::chrono::high_resolution_clock::now();
     double enc_us = std::chrono::duration_cast<std::chrono::microseconds>(t2-t1).count() / (double)ITERS;
@@ -156,7 +156,7 @@ int main() {
     auto c1 = rhe.encrypt(10.0, 70), c2 = rhe.encrypt(20.0, 75);
     t1 = std::chrono::high_resolution_clock::now();
     for (int i = 0; i < ITERS; i++) {
-        volatile auto c = rhe.add(c1, c2);
+        volatile auto c __attribute__((unused)) = rhe.add(c1, c2);
     }
     t2 = std::chrono::high_resolution_clock::now();
     double add_us = std::chrono::duration_cast<std::chrono::microseconds>(t2-t1).count() / (double)ITERS;

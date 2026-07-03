@@ -253,8 +253,6 @@ public:
         double vb = decrypt(b, true);
         
         // Compute delta with respective scale factors
-        double delta_a = value_to_delta(va, a.scale_factor);
-        double delta_b = value_to_delta(vb, b.scale_factor);
         
         // The actual sum value
         double val_sum = va + vb;

@@ -216,7 +216,7 @@ public:
         log_file_.flush();  // Immediate write (tamper-evident)
     }
     
-    void log_encrypt(uint64_t key_id) {
+    void log_encrypt(uint64_t __attribute__((unused)) key_id) {
         log("ENCRYPT", "key_id=" + std::to_string(key_id));
     }
     
@@ -237,7 +237,7 @@ class SecureSerializer {
 public:
     // Wire format: [version:2B][flags:2B][length:4B][data:N][hmac:32B]
     static std::vector<uint8_t> serialize(const std::vector<std::complex<double>>& state,
-                                           uint64_t key_id) {
+                                           uint64_t __attribute__((unused)) key_id) {
         std::vector<uint8_t> output;
         output.reserve(8 + state.size() * 16 + 32);
         

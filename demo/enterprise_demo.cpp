@@ -58,7 +58,7 @@ int main() {
     // ═══ MODULE 5: INPUT VALIDATION ═══
     std::cout << "\n═══ 5. INPUT VALIDATION ═══\n\n";
     uint8_t valid[128] = {1,2,3};
-    uint8_t huge[2ULL << 30] = {0};  // Too big — just test logic
+    uint8_t huge[64] __attribute__((unused)) = {0};  // Too big — just test logic
     std::cout << "  Valid input:       " << (InputValidator::validate_ciphertext(valid, 128) ? "PASS ✓" : "REJECT") << "\n";
     std::cout << "  Null ptr:          " << (!InputValidator::validate_ciphertext(nullptr, 128) ? "REJECT ✓" : "PASS ✗") << "\n";
     std::cout << "  Weak seed (0):     " << (!InputValidator::validate_key_seed(0) ? "REJECT ✓" : "PASS ✗") << "\n";

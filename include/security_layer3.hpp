@@ -48,7 +48,7 @@ struct IrrationalBasis {
     IrrationalBasis() : dim(64) { init(0); }
     IrrationalBasis(uint64_t seed, size_t d = 64) : dim(d) { init(seed); }
     
-    void init(uint64_t seed) {
+    void init(uint64_t __attribute__((unused)) seed) {
         basis_vectors.resize(dim);
         // Use φ-weighted irrational phases — guaranteed non-repeating for dim ≤ 1000
         for (size_t i = 0; i < dim; i++) {
