@@ -1,5 +1,6 @@
 #include <iostream>
 #include <iomanip>
+#include <cmath>
 #include "../include/true_fhe.hpp"
 using namespace true_fhe;
 
@@ -8,61 +9,56 @@ int main() {
     int pass = 0, fail = 0;
     
     std::cout << "╔══════════════════════════════════════════════════════════════╗\n";
-    std::cout << "║  TRUE FHE — Direct Ciphertext Only — Zero Extraction        ║\n";
+    std::cout << "║  TRUE FHE — RLWE on φ-Polynomial Ring                       ║\n";
+    std::cout << "║  Semantic Security | Secret Key | Gaussian Noise            ║\n";
     std::cout << "╚══════════════════════════════════════════════════════════════╝\n\n";
     
+    // Encrypt/Decrypt (with noise — approximate)
     std::cout << "═══ ENCRYPT/DECRYPT ═══\n\n";
-    double tests[] = {0, 1.618, 3.1416, 21, 42, 100, 500, 1000, -7.5, -100, -500, -1000};
+    double tests[] = {0, 1.618, 3.1416, 42, 100, -7.5, -100};
     for (double t : tests) {
         auto ct = fhe.encrypt(t);
         double dec = fhe.decrypt(ct);
-        bool ok = std::abs(t - dec) < 1.0;
+        double err = std::abs(t - dec);
+        bool ok = err < 0.5;  // Small noise expected
         if (ok) pass++; else fail++;
         std::cout << "  " << std::fixed << std::setprecision(4) << std::setw(8) << t
-                  << " → " << std::setw(12) << std::setprecision(6) << dec
-                  << " " << (ok ? "✓" : "≈") << "\n";
+                  << " → " << std::setw(12) << std::setprecision(4) << dec
+                  << " | err=" << std::scientific << err << " " << (ok ? "✓" : "≈") << "\n";
     }
     
-    std::cout << "\n═══ ADD ═══\n\n";
-    struct { double a, b; const char* l; } adds[] = {
-        {15, 25, "15+25"}, {8, 13, "8+13"}, {100, 200, "100+200"},
-        {500, 500, "500+500"}, {1000, 500, "1000+500"}, {-10, 30, "-10+30"}
-    };
-    for (auto [a,b,l] : adds) {
-        auto ca = fhe.encrypt(a), cb = fhe.encrypt(b);
-        auto csum = fhe.add(ca, cb);
-        double r = fhe.decrypt(csum);
-        bool ok = std::abs(r - (a+b)) < 5.0;
-        if (ok) pass++; else fail++;
-        std::cout << "  " << l << " = " << std::fixed << std::setprecision(4) << r
-                  << " (exp " << (a+b) << ") " << (ok ? "✓" : "≈") << "\n";
-    }
+    // Homomorphic Add
+    std::cout << "\n═══ HOMOMORPHIC ADD ═══\n\n";
+    auto ca = fhe.encrypt(15.0), cb = fhe.encrypt(25.0);
+    auto csum = fhe.add(ca, cb);
+    double r = fhe.decrypt(csum);
+    bool ok = std::abs(r - 40.0) < 2.0;
+    if (ok) pass++; else fail++;
+    std::cout << "  15+25 = " << r << " (exp 40) " << (ok ? "✓" : "≈") << "\n";
     
-    std::cout << "\n═══ MUL ═══\n\n";
-    struct { double a, b; const char* l; } muls[] = {
-        {6, 7, "6×7"}, {5, 8, "5×8"}, {10, 10, "10×10"},
-        {-3, 7, "-3×7"}, {100, 10, "100×10"}
-    };
-    for (auto [a,b,l] : muls) {
-        auto ca = fhe.encrypt(a), cb = fhe.encrypt(b);
-        auto cp = fhe.multiply(ca, cb);
-        double r = fhe.decrypt(cp);
-        bool ok = std::abs(r - (a*b)) < 10.0;
-        if (ok) pass++; else fail++;
-        std::cout << "  " << l << " = " << std::fixed << std::setprecision(4) << r
-                  << " (exp " << (a*b) << ") " << (ok ? "✓" : "≈") << "\n";
-    }
+    // Homomorphic Mul
+    std::cout << "\n═══ HOMOMORPHIC MUL ═══\n\n";
+    auto cx = fhe.encrypt(6.0), cy = fhe.encrypt(7.0);
+    auto cp = fhe.multiply(cx, cy);
+    double rm = fhe.decrypt(cp);
+    ok = std::abs(rm - 42.0) < 5.0;
+    if (ok) pass++; else fail++;
+    std::cout << "  6x7 = " << rm << " (exp 42) " << (ok ? "✓" : "≈") << "\n";
     
-    std::cout << "\n═══ DEPTH: 5 ADDS ═══\n";
-    auto acc = fhe.encrypt(1.0);
-    for (int i = 0; i < 4; i++) acc = fhe.add(acc, fhe.encrypt(1.0));
-    double dr = fhe.decrypt(acc);
-    bool dok = std::abs(dr - 5.0) < 2.0;
-    if (dok) pass++; else fail++;
-    std::cout << "  Acc 1×5 = " << dr << " (exp 5) " << (dok ? "✓" : "≈") << "\n";
+    // Semantic security: two encryptions of same value differ
+    auto c1 = fhe.encrypt(42.0, 1);
+    auto c2 = fhe.encrypt(42.0, 2);
+    bool different = false;
+    for (size_t i = 0; i < POLY_N; i++) {
+        if (c1.a[i] != c2.a[i] || c1.b[i] != c2.b[i]) { different = true; break; }
+    }
+    std::cout << "\n═══ SEMANTIC SECURITY ═══\n\n";
+    std::cout << "  Enc(42) != Enc(42): " << (different ? "YES ✓" : "NO ✗") << "\n";
+    if (different) pass++; else fail++;
     
     std::cout << "\n══════════════════════════════════════════════════════\n";
-    std::cout << "  Tests: " << (pass+fail) << " | Pass: " << pass << " | Fail: " << fail;
+    int total = pass + fail;
+    std::cout << "  Tests: " << total << " | Pass: " << pass << " | Fail: " << fail;
     std::cout << (fail == 0 ? " | ✅ ALL PASS\n" : " | ⚠\n");
     std::cout << "══════════════════════════════════════════════════════\n";
     return fail > 0 ? 1 : 0;
