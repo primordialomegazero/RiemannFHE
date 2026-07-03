@@ -1,0 +1,34 @@
+# Build artifacts
+build/
+*.o
+*.a
+*.so
+*.out
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+/tmp/
+
+# Dependencies
+node_modules/
+vendor/
+
+# Docker
+*.tar
+
+# Secrets
+.env
+*.pem
+*.key
+credentials.json
