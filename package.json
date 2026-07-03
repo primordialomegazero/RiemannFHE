@@ -1,0 +1,41 @@
+{
+  "name": "@primordialomegazero/riemann-fhe",
+  "version": "2.0.0",
+  "description": "Noise-Free Fully Homomorphic Encryption on the Riemann Critical Line Re(s)=1/2",
+  "main": "bindings/node/riemann_fhe.js",
+  "files": [
+    "bindings/",
+    "include/",
+    "Makefile",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "install": "make all -j$(nproc)",
+    "test": "make test",
+    "bench": "make bench"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/primordialomegazero/RiemannFHE.git"
+  },
+  "keywords": [
+    "fhe",
+    "fully-homomorphic-encryption",
+    "riemann-zeta",
+    "golden-ratio",
+    "noise-free",
+    "post-quantum",
+    "homomorphic-encryption",
+    "cryptography"
+  ],
+  "author": "Dan Joseph M. Fernandez / Primordial Omega Zero",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/primordialomegazero/RiemannFHE/issues"
+  },
+  "homepage": "https://github.com/primordialomegazero/RiemannFHE#readme",
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

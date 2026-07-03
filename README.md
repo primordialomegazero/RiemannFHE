@@ -1,5 +1,6 @@
 # RiemannFHE — Noise-Free Fully Homomorphic Encryption
 
+[![Docker](https://img.shields.io/badge/docker-ghcr.io%2Fprimordialomegazero%2Friemann--fhe-blue)](https://github.com/primordialomegazero/RiemannFHE/pkgs/container/riemann-fhe) [![NPM](https://img.shields.io/badge/npm-@primordialomegazero%2Friemann--fhe-red)](https://www.npmjs.com/package/@primordialomegazero/riemann-fhe)
 **License: MIT | C++17 | Docker | Tests | Security | Quantum**
 
 ```
