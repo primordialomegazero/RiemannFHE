@@ -1,10 +1,11 @@
+nohup: ignoring input
 
 ╔══════════════════════════════════════════════════════════════════╗
 ║  FRACTAL TRUE FHE — 1 BILLION OPERATIONS                        ║
 ║  Direct Ciphertext | Zero Extraction | Absolute Zero Error      ║
 ║  HONEST REPORT — Every 50M ops                                  ║
 ╚══════════════════════════════════════════════════════════════════╝
-  Date: Sat Jul  4 01:42:36 2026
+  Date: Sat Jul  4 01:46:07 2026
   Compiler: g++ -O0 (no optimizations)
   Total ops: 1,000,000,000
   Report interval: 50,000,000
