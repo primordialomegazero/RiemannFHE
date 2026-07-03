@@ -1,0 +1,8 @@
+cmake_minimum_required(VERSION 3.16)
+project(RiemannFHE VERSION 1.0.0 LANGUAGES CXX)
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+add_library(riemann_fhe INTERFACE)
+target_include_directories(riemann_fhe INTERFACE include)
+add_executable(riemann_demo src/main.cpp)
+target_link_libraries(riemann_demo PRIVATE riemann_fhe)
