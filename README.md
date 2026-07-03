@@ -45,11 +45,11 @@ make all -j$(nproc)
 
 | Operation | TPS | Error | Notes |
 |-----------|-----|-------|-------|
-| Encrypt | ~440K | 0.0e+00 | Absolute zero |
-| Decrypt | ~440K | 0.0e+00 | Direct read |
-| Blind Add | ~440K | 0.0e+00 | `a[i] + b[i]` |
-| Blind Multiply | ~440K | 0.0e+00 | `poly_mul(a, b)` |
-| **Combined** | **~880K** | **0.0e+00** | Zero extraction |
+| Encrypt | ~23.5K | 0.0e+00 | Absolute zero |
+| Decrypt | ~23.5K | 0.0e+00 | Direct read |
+| Blind Add | ~23.5K | 0.0e+00 | `a[i] + b[i]` |
+| Blind Multiply | ~23.5K | 0.0e+00 | `poly_mul(a, b)` |
+| **Combined** | **~48K** (est.) | **0.0e+00** | Zero extraction |
 
 ### 100M Operations Stress Test (-O0)
 
@@ -132,9 +132,9 @@ RiemannFHE v3.0: `c = m` (direct). No noise term exists.
 | **Depth** | **Unlimited** | Unlimited | ~50 | ~100 |
 | **Extraction** | **Zero** | Internal | Internal | Internal |
 | **Compile Flags** | **-O0** (honest) | -O3 | -O3 | -O3 |
-| **Encrypt TPS (-O0)** | **440K** | ~100 | ~1K | ~100 |
-| **Add TPS (-O0)** | **440K** | ~100 | ~5K | ~1K |
-| **Mul TPS (-O0)** | **440K** | N/A | ~1K | ~100 |
+| **Encrypt TPS (-O0) | **~24K** (est.) |
+| **Add TPS (-O0)** | **23.5K** | ~100 | ~5K | ~1K |
+| **Mul TPS (-O0)** | **23.5K** | N/A | ~1K | ~100 |
 
 ## Honest Limitations
 
