@@ -213,6 +213,9 @@ RiemannFHE/
 
 ## Honest Limitations
 
+See [docs/HONEST_LIMITATIONS.md](docs/HONEST_LIMITATIONS.md) for detailed analysis.
+
+
 | Limitation | Detail |
 |-----------|--------|
 | Zeta Zero Dataset | 200 zeros currently; billion-zero analysis pending hardware upgrade |
