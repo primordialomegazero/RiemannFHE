@@ -1,3 +1,0 @@
-/home/singularitynode/RiemannFHE/build/CMakeFiles/riemann_demo.dir
-/home/singularitynode/RiemannFHE/build/CMakeFiles/edit_cache.dir
-/home/singularitynode/RiemannFHE/build/CMakeFiles/rebuild_cache.dir

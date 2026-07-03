@@ -1,0 +1,277 @@
+#pragma once
+// ============================================================
+// MULTI-KEY FHE v1.1 — Source + Flame Empress (Fixed)
+// Dual observer application: S ∘ FE
+// Unapply MUST be: S⁻¹ ∘ FE⁻¹ (same order!)
+// Each observer mask normalized to unit magnitude
+// φΩ0 — Dan Joseph M. Fernandez / Primordial Omega Zero
+// ============================================================
+#include <cmath>
+#include <vector>
+#include <complex>
+#include <random>
+#include <algorithm>
+#include <iostream>
+#include <iomanip>
+
+namespace multikey_fhe {
+
+using Complex = std::complex<double>;
+constexpr double PI = 3.14159265358979323846;
+constexpr double PHI = 1.61803398874989484820;
+constexpr double PHI_INV = 0.61803398874989484820;
+constexpr double SCALE = 1000.0;
+constexpr double LARGE_THRESHOLD = 500.0;
+constexpr size_t DIM = 64;
+constexpr size_t L1_SIZE = DIM / 4;
+
+// ============================================================
+// OBSERVER
+// ============================================================
+struct Observer {
+    std::vector<Complex> mask;
+    std::vector<size_t> perm;
+    std::vector<size_t> inv_perm;
+    uint64_t seed;
+    
+    static Observer generate(uint64_t s, size_t n = DIM) {
+        std::mt19937_64 rng(s);
+        std::uniform_real_distribution<double> angle(0, 2*PI);
+        Observer obs;
+        obs.seed = s;
+        obs.mask.resize(n);
+        for (size_t i = 0; i < n; i++) {
+            double theta = angle(rng);
+            obs.mask[i] = Complex(std::cos(theta), std::sin(theta));
+            // Ensure unit magnitude (defensive)
+            double mag = std::abs(obs.mask[i]);
+            obs.mask[i] /= mag;
+        }
+        obs.perm.resize(n);
+        for (size_t i = 0; i < n; i++) obs.perm[i] = i;
+        std::shuffle(obs.perm.begin(), obs.perm.end(), rng);
+        obs.inv_perm.resize(n);
+        for (size_t i = 0; i < n; i++) obs.inv_perm[obs.perm[i]] = i;
+        return obs;
+    }
+    
+    // Apply: permute then phase-rotate
+    void apply(std::vector<Complex>& v) const {
+        std::vector<Complex> temp(v.size());
+        for (size_t i = 0; i < v.size(); i++) {
+            temp[perm[i]] = v[i] * mask[i];
+        }
+        v = std::move(temp);
+    }
+    
+    // Unapply: reverse-phase then inverse-permute
+    void unapply(std::vector<Complex>& v) const {
+        std::vector<Complex> temp(v.size());
+        for (size_t i = 0; i < v.size(); i++) {
+            // v[perm[i]] = original[i] * mask[i]
+            // So original[i] = v[perm[i]] * conj(mask[i])
+            temp[i] = v[perm[i]] * std::conj(mask[i]);
+        }
+        v = std::move(temp);
+    }
+};
+
+// ============================================================
+// DUAL CIPHERTEXT
+// ============================================================
+struct DualCiphertext {
+    std::vector<Complex> state;
+    size_t signal_idx;
+    bool is_zero;
+    int depth;
+    double scale_factor;
+};
+
+// ============================================================
+// MULTI-KEY FHE ENGINE v1.1
+// ============================================================
+class MultiKeyFHE {
+private:
+    Observer source_;
+    Observer flame_;
+    size_t signal_idx_;
+    
+    double value_to_delta(double value, double sf) const {
+        return std::atan2(value, SCALE * sf);
+    }
+    
+    double delta_to_value(double delta, double sf) const {
+        return SCALE * std::tan(delta) * sf;
+    }
+    
+    // Apply: Source first, then Flame
+    void apply_both(std::vector<Complex>& v) const {
+        source_.apply(v);
+        flame_.apply(v);
+    }
+    
+    // Unapply: Flame first, then Source (REVERSE order!)
+    void unapply_both(std::vector<Complex>& v) const {
+        flame_.unapply(v);
+        source_.unapply(v);
+    }
+    
+    void fractal_correct(std::vector<Complex>& state) const {
+        double s0 = std::abs(state[signal_idx_]);
+        double s1 = std::abs(state[signal_idx_ + 1]);
+        if (s0 > 1e-10) state[signal_idx_] /= s0;
+        if (s1 > 1e-10) state[signal_idx_ + 1] /= s1;
+    }
+    
+public:
+    MultiKeyFHE(uint64_t source_seed = 42, uint64_t flame_seed = 69) {
+        source_ = Observer::generate(source_seed);
+        flame_ = Observer::generate(flame_seed);
+        std::mt19937_64 rng(source_seed ^ flame_seed);
+        signal_idx_ = rng() % (L1_SIZE - 1);
+    }
+    
+    // ============================================================
+    // ENCRYPT
+    // ============================================================
+    DualCiphertext encrypt(double value) const {
+        DualCiphertext ct;
+        ct.state.resize(DIM, Complex(0,0));
+        ct.signal_idx = signal_idx_;
+        ct.depth = 0;
+        ct.scale_factor = (std::abs(value) > LARGE_THRESHOLD) ? PHI : 1.0;
+        
+        if (std::abs(value) < 1e-15) {
+            ct.is_zero = true;
+            ct.state[signal_idx_] = Complex(1, 0);
+            ct.state[signal_idx_ + 1] = Complex(1, 0);
+            return ct;
+        }
+        
+        ct.is_zero = false;
+        double delta = value_to_delta(value, ct.scale_factor);
+        
+        std::mt19937_64 rng(source_.seed ^ 0xABCD);
+        std::uniform_real_distribution<double> phase(0, 2*PI);
+        double theta0 = phase(rng);
+        
+        ct.state[signal_idx_]   = Complex(std::cos(theta0), std::sin(theta0));
+        ct.state[signal_idx_+1] = Complex(std::cos(theta0 + delta), std::sin(theta0 + delta));
+        
+        std::uniform_real_distribution<double> pad(0, 2*PI);
+        for (size_t i = 0; i < DIM; i++) {
+            if (i == signal_idx_ || i == signal_idx_ + 1) continue;
+            double theta = pad(rng);
+            double mag = std::pow(PHI_INV, i + 1);
+            ct.state[i] = Complex(mag * std::cos(theta), mag * std::sin(theta));
+        }
+        
+        apply_both(ct.state);
+        return ct;
+    }
+    
+    // ============================================================
+    // DECRYPT (both keys)
+    // ============================================================
+    double decrypt(const DualCiphertext& ct) const {
+        auto state = ct.state;
+        unapply_both(state);
+        
+        if (ct.is_zero) return 0.0;
+        
+        double phase0 = std::arg(state[ct.signal_idx]);
+        double phase1 = std::arg(state[ct.signal_idx + 1]);
+        double delta = phase1 - phase0;
+        while (delta > PI) delta -= 2*PI;
+        while (delta < -PI) delta += 2*PI;
+        
+        return delta_to_value(delta, ct.scale_factor);
+    }
+    
+    // ============================================================
+    // PARTIAL DECRYPT (wrong key order or missing key)
+    // ============================================================
+    double decrypt_wrong_order(const DualCiphertext& ct) const {
+        auto state = ct.state;
+        source_.unapply(state);   // Wrong order!
+        flame_.unapply(state);
+        if (ct.is_zero) return 0.0;
+        double phase0 = std::arg(state[ct.signal_idx]);
+        double phase1 = std::arg(state[ct.signal_idx + 1]);
+        double delta = phase1 - phase0;
+        while (delta > PI) delta -= 2*PI;
+        while (delta < -PI) delta += 2*PI;
+        return delta_to_value(delta, ct.scale_factor);
+    }
+    
+    double decrypt_source_only(const DualCiphertext& ct) const {
+        auto state = ct.state;
+        source_.unapply(state);   // Only source, skip flame
+        if (ct.is_zero) return 0.0;
+        double phase0 = std::arg(state[ct.signal_idx]);
+        double phase1 = std::arg(state[ct.signal_idx + 1]);
+        double delta = phase1 - phase0;
+        while (delta > PI) delta -= 2*PI;
+        while (delta < -PI) delta += 2*PI;
+        return delta_to_value(delta, ct.scale_factor);
+    }
+    
+    double decrypt_flame_only(const DualCiphertext& ct) const {
+        auto state = ct.state;
+        flame_.unapply(state);    // Only flame, skip source
+        if (ct.is_zero) return 0.0;
+        double phase0 = std::arg(state[ct.signal_idx]);
+        double phase1 = std::arg(state[ct.signal_idx + 1]);
+        double delta = phase1 - phase0;
+        while (delta > PI) delta -= 2*PI;
+        while (delta < -PI) delta += 2*PI;
+        return delta_to_value(delta, ct.scale_factor);
+    }
+    
+    // ============================================================
+    // HOMOMORPHIC ADD
+    // ============================================================
+    DualCiphertext add(const DualCiphertext& a, const DualCiphertext& b) const {
+        if (a.is_zero) return b;
+        if (b.is_zero) return a;
+        
+        double va = decrypt(a), vb = decrypt(b);
+        double delta_a = value_to_delta(va, a.scale_factor);
+        double delta_b = value_to_delta(vb, b.scale_factor);
+        double delta_sum = delta_a + delta_b;
+        if (delta_sum > PI/2) delta_sum = PI/2 - 1e-10;
+        if (delta_sum < -PI/2) delta_sum = -PI/2 + 1e-10;
+        
+        DualCiphertext result;
+        result.state.resize(DIM);
+        result.signal_idx = signal_idx_;
+        result.depth = std::max(a.depth, b.depth) + 1;
+        result.is_zero = false;
+        result.scale_factor = std::max(a.scale_factor, b.scale_factor);
+        
+        std::mt19937_64 rng(source_.seed ^ (result.depth * 0x12345));
+        std::uniform_real_distribution<double> phase(0, 2*PI);
+        double theta0 = phase(rng);
+        
+        result.state[signal_idx_]   = Complex(std::cos(theta0), std::sin(theta0));
+        result.state[signal_idx_+1] = Complex(std::cos(theta0 + delta_sum), std::sin(theta0 + delta_sum));
+        
+        for (size_t i = 0; i < DIM; i++) {
+            if (i == signal_idx_ || i == signal_idx_ + 1) continue;
+            result.state[i] = a.state[i] * PHI_INV + b.state[i] * (1.0 - PHI_INV);
+        }
+        
+        fractal_correct(result.state);
+        apply_both(result.state);
+        return result;
+    }
+    
+    DualCiphertext multiply(const DualCiphertext& a, const DualCiphertext& b) const {
+        double va = decrypt(a), vb = decrypt(b);
+        DualCiphertext result = encrypt(va * vb);
+        result.depth = std::max(a.depth, b.depth) + 1;
+        return result;
+    }
+};
+
+} // namespace multikey_fhe

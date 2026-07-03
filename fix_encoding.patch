@@ -1,0 +1,19 @@
+--- a/double_observer_fhe.hpp
++++ b/double_observer_fhe.hpp
+@@ -28,12 +28,10 @@ constexpr size_t DIM = 64;
+ // ============================================================
+-// VALUE ⇄ PHASE encoding (NOT Fibonacci quantization!)
++// VALUE ⇄ PHASE encoding — LINEAR, no distortion
+ // ============================================================
+ inline double encode_phase(double value) {
+-    // Map value to [-π/2, π/2] using tanh for soft clipping
+-    return std::atan(std::tanh(value / 100.0)) * PI;
++    return value * PI / 200.0;  // Linear mapping: 200 → π
+ }
+ 
+ inline double decode_phase(double phase) {
+-    // Inverse mapping
+-    double t = std::tan(phase / PI);
+-    return std::atanh(std::max(-0.99, std::min(0.99, t))) * 100.0;
++    return phase * 200.0 / PI;  // Linear inverse
+ }
