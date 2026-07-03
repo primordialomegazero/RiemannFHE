@@ -1,9 +1,8 @@
 #pragma once
 // ============================================================
-// MULTI-KEY FHE v1.1 — Source + Flame Empress (Fixed)
-// Dual observer application: S ∘ FE
-// Unapply MUST be: S⁻¹ ∘ FE⁻¹ (same order!)
-// Each observer mask normalized to unit magnitude
+// MULTI-KEY FHE v2.0 — Source + Flame Empress
+// Adaptive φ-scaling (same as Ratio FHE v4.1)
+// 24-hour Transmutation Timer built-in
 // φΩ0 — Dan Joseph M. Fernandez / Primordial Omega Zero
 // ============================================================
 #include <cmath>
@@ -13,6 +12,7 @@
 #include <algorithm>
 #include <iostream>
 #include <iomanip>
+#include <chrono>
 
 namespace multikey_fhe {
 
@@ -24,6 +24,9 @@ constexpr double SCALE = 1000.0;
 constexpr double LARGE_THRESHOLD = 500.0;
 constexpr size_t DIM = 64;
 constexpr size_t L1_SIZE = DIM / 4;
+
+// 24-hour window in seconds
+constexpr double TRANSMUTATION_WINDOW = 24.0 * 3600.0;  // 86400 seconds
 
 // ============================================================
 // OBSERVER
@@ -43,7 +46,6 @@ struct Observer {
         for (size_t i = 0; i < n; i++) {
             double theta = angle(rng);
             obs.mask[i] = Complex(std::cos(theta), std::sin(theta));
-            // Ensure unit magnitude (defensive)
             double mag = std::abs(obs.mask[i]);
             obs.mask[i] /= mag;
         }
@@ -55,7 +57,6 @@ struct Observer {
         return obs;
     }
     
-    // Apply: permute then phase-rotate
     void apply(std::vector<Complex>& v) const {
         std::vector<Complex> temp(v.size());
         for (size_t i = 0; i < v.size(); i++) {
@@ -64,12 +65,9 @@ struct Observer {
         v = std::move(temp);
     }
     
-    // Unapply: reverse-phase then inverse-permute
     void unapply(std::vector<Complex>& v) const {
         std::vector<Complex> temp(v.size());
         for (size_t i = 0; i < v.size(); i++) {
-            // v[perm[i]] = original[i] * mask[i]
-            // So original[i] = v[perm[i]] * conj(mask[i])
             temp[i] = v[perm[i]] * std::conj(mask[i]);
         }
         v = std::move(temp);
@@ -77,7 +75,7 @@ struct Observer {
 };
 
 // ============================================================
-// DUAL CIPHERTEXT
+// DUAL CIPHERTEXT with timer metadata
 // ============================================================
 struct DualCiphertext {
     std::vector<Complex> state;
@@ -85,10 +83,16 @@ struct DualCiphertext {
     bool is_zero;
     int depth;
     double scale_factor;
+    
+    // 24-hour transmutation timer
+    std::chrono::system_clock::time_point created_at;
+    bool timer_expired;
+    
+    DualCiphertext() : created_at(std::chrono::system_clock::now()), timer_expired(false) {}
 };
 
 // ============================================================
-// MULTI-KEY FHE ENGINE v1.1
+// MULTI-KEY FHE ENGINE v2.0
 // ============================================================
 class MultiKeyFHE {
 private:
@@ -104,13 +108,11 @@ private:
         return SCALE * std::tan(delta) * sf;
     }
     
-    // Apply: Source first, then Flame
     void apply_both(std::vector<Complex>& v) const {
         source_.apply(v);
         flame_.apply(v);
     }
     
-    // Unapply: Flame first, then Source (REVERSE order!)
     void unapply_both(std::vector<Complex>& v) const {
         flame_.unapply(v);
         source_.unapply(v);
@@ -123,6 +125,13 @@ private:
         if (s1 > 1e-10) state[signal_idx_ + 1] /= s1;
     }
     
+    // Check if timer expired (24h window)
+    bool is_expired(const DualCiphertext& ct) const {
+        auto now = std::chrono::system_clock::now();
+        auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(now - ct.created_at).count();
+        return elapsed > TRANSMUTATION_WINDOW;
+    }
+    
 public:
     MultiKeyFHE(uint64_t source_seed = 42, uint64_t flame_seed = 69) {
         source_ = Observer::generate(source_seed);
@@ -132,16 +141,19 @@ public:
     }
     
     // ============================================================
-    // ENCRYPT
+    // ENCRYPT with adaptive scaling
     // ============================================================
     DualCiphertext encrypt(double value) const {
         DualCiphertext ct;
         ct.state.resize(DIM, Complex(0,0));
         ct.signal_idx = signal_idx_;
         ct.depth = 0;
-        ct.scale_factor = (std::abs(value) > LARGE_THRESHOLD) ? PHI : 1.0;
         
-        if (std::abs(value) < 1e-15) {
+        // Adaptive scaling: large values → scale by φ
+        double abs_val = std::abs(value);
+        ct.scale_factor = (abs_val > LARGE_THRESHOLD) ? PHI : 1.0;
+        
+        if (abs_val < 1e-15) {
             ct.is_zero = true;
             ct.state[signal_idx_] = Complex(1, 0);
             ct.state[signal_idx_ + 1] = Complex(1, 0);
@@ -171,14 +183,21 @@ public:
     }
     
     // ============================================================
-    // DECRYPT (both keys)
+    // DECRYPT — with timer check
     // ============================================================
-    double decrypt(const DualCiphertext& ct) const {
+    double decrypt(const DualCiphertext& ct, bool force = false) const {
         auto state = ct.state;
         unapply_both(state);
         
         if (ct.is_zero) return 0.0;
         
+        // Check transmutation timer
+        if (!force && is_expired(ct)) {
+            // After 24h, return garbled value (pain → wisdom transmutation)
+            std::mt19937_64 rng((uint64_t)ct.created_at.time_since_epoch().count());
+            return (double)(rng() % 10000) - 5000.0;  // Garbage
+        }
+        
         double phase0 = std::arg(state[ct.signal_idx]);
         double phase1 = std::arg(state[ct.signal_idx + 1]);
         double delta = phase1 - phase0;
@@ -188,25 +207,20 @@ public:
         return delta_to_value(delta, ct.scale_factor);
     }
     
-    // ============================================================
-    // PARTIAL DECRYPT (wrong key order or missing key)
-    // ============================================================
-    double decrypt_wrong_order(const DualCiphertext& ct) const {
-        auto state = ct.state;
-        source_.unapply(state);   // Wrong order!
-        flame_.unapply(state);
-        if (ct.is_zero) return 0.0;
-        double phase0 = std::arg(state[ct.signal_idx]);
-        double phase1 = std::arg(state[ct.signal_idx + 1]);
-        double delta = phase1 - phase0;
-        while (delta > PI) delta -= 2*PI;
-        while (delta < -PI) delta += 2*PI;
-        return delta_to_value(delta, ct.scale_factor);
+    // Check remaining time
+    double time_remaining(const DualCiphertext& ct) const {
+        auto now = std::chrono::system_clock::now();
+        auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(now - ct.created_at).count();
+        double remaining = TRANSMUTATION_WINDOW - elapsed;
+        return std::max(0.0, remaining);
     }
     
+    // ============================================================
+    // PARTIAL DECRYPT
+    // ============================================================
     double decrypt_source_only(const DualCiphertext& ct) const {
         auto state = ct.state;
-        source_.unapply(state);   // Only source, skip flame
+        source_.unapply(state);
         if (ct.is_zero) return 0.0;
         double phase0 = std::arg(state[ct.signal_idx]);
         double phase1 = std::arg(state[ct.signal_idx + 1]);
@@ -218,7 +232,7 @@ public:
     
     double decrypt_flame_only(const DualCiphertext& ct) const {
         auto state = ct.state;
-        flame_.unapply(state);    // Only flame, skip source
+        flame_.unapply(state);
         if (ct.is_zero) return 0.0;
         double phase0 = std::arg(state[ct.signal_idx]);
         double phase1 = std::arg(state[ct.signal_idx + 1]);
@@ -229,16 +243,30 @@ public:
     }
     
     // ============================================================
-    // HOMOMORPHIC ADD
+    // HOMOMORPHIC ADD — with adaptive scaling
     // ============================================================
     DualCiphertext add(const DualCiphertext& a, const DualCiphertext& b) const {
         if (a.is_zero) return b;
         if (b.is_zero) return a;
         
-        double va = decrypt(a), vb = decrypt(b);
+        double va = decrypt(a, true);  // Force decrypt (ignore timer for ops)
+        double vb = decrypt(b, true);
+        
+        // Compute delta with respective scale factors
         double delta_a = value_to_delta(va, a.scale_factor);
         double delta_b = value_to_delta(vb, b.scale_factor);
-        double delta_sum = delta_a + delta_b;
+        
+        // The actual sum value
+        double val_sum = va + vb;
+        double abs_sum = std::abs(val_sum);
+        
+        // Adaptive scale for result
+        double result_sf = (abs_sum > LARGE_THRESHOLD) ? PHI : 1.0;
+        result_sf = std::max(result_sf, std::max(a.scale_factor, b.scale_factor));
+        
+        // Compute delta for result value with result scale
+        double delta_sum = value_to_delta(val_sum, result_sf);
+        
         if (delta_sum > PI/2) delta_sum = PI/2 - 1e-10;
         if (delta_sum < -PI/2) delta_sum = -PI/2 + 1e-10;
         
@@ -247,7 +275,7 @@ public:
         result.signal_idx = signal_idx_;
         result.depth = std::max(a.depth, b.depth) + 1;
         result.is_zero = false;
-        result.scale_factor = std::max(a.scale_factor, b.scale_factor);
+        result.scale_factor = result_sf;
         
         std::mt19937_64 rng(source_.seed ^ (result.depth * 0x12345));
         std::uniform_real_distribution<double> phase(0, 2*PI);
@@ -267,7 +295,7 @@ public:
     }
     
     DualCiphertext multiply(const DualCiphertext& a, const DualCiphertext& b) const {
-        double va = decrypt(a), vb = decrypt(b);
+        double va = decrypt(a, true), vb = decrypt(b, true);
         DualCiphertext result = encrypt(va * vb);
         result.depth = std::max(a.depth, b.depth) + 1;
         return result;
