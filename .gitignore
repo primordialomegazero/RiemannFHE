@@ -32,3 +32,7 @@ vendor/
 *.pem
 *.key
 credentials.json
+
+# Keep test results
+!test/results/
+!test/results/*.txt

@@ -1,0 +1,38 @@
+
+╔══════════════════════════════════════════════════════════════╗
+║  ENTERPRISE HARDENING TEST SUITE                            ║
+║  JWT Auth | Rate Limiter | Memory Guard                     ║
+║  φΩ0 — Primordial Omega Zero                                ║
+╚══════════════════════════════════════════════════════════════╝
+
+═══ 1. JWT AUTHENTICATION ═══
+
+  ✅ Token generated
+  ✅ Token has 3 parts
+  ✅ Token verifies
+  ✅ Invalid token rejected
+  ✅ Empty token rejected
+  ℹ️  Secret rotated (φ-based)
+
+═══ 2. RATE LIMITER ═══
+
+  ✅ Burst limited to max tokens
+  ✅ Exceeded requests blocked
+  ✅ Different client not affected
+  ✅ VIP gets more tokens
+  ✅ Restricted gets fewer tokens
+  ✅ Active clients tracked
+
+═══ 3. MEMORY GUARD ═══
+
+  ✅ Memory allocated
+  ✅ Memory verifies (canary intact)
+  ✅ Multiple allocations
+  ✅ All canaries intact
+  ✅ Memory writable
+  ✅ Canary still intact after write
+  ✅ Deallocation successful
+
+══════════════════════════════════════════════════════
+  Tests: 18 | Pass: 18 | Fail: 0 | ✅ ALL PASS
+══════════════════════════════════════════════════════
