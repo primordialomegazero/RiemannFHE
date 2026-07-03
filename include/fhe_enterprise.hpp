@@ -326,3 +326,37 @@ public:
 };
 
 } // namespace enterprise
+
+// ═══════════════════════════════════════════════════════════════
+// ADDITIONAL HARDENING MODULES (v2.1)
+// ═══════════════════════════════════════════════════════════════
+
+#include "../security/hardening/jwt_auth.hpp"
+#include "../security/hardening/rate_limiter.hpp"
+#include "../security/hardening/memory_guard.hpp"
+
+namespace enterprise {
+
+// Module 11: Authentication
+class AuthModule {
+    riemann_auth::JWTAuth jwt_;
+    riemann_rate::RateLimiter limiter_;
+public:
+    AuthModule(const std::string& secret) : jwt_(secret) {}
+    
+    std::string create_token(const std::string& user) { return jwt_.create_token(user).encode(); }
+    bool verify_token(const std::string& token) { return jwt_.verify_token(token); }
+    bool check_rate(const std::string& client) { return limiter_.allow_request(client); }
+};
+
+// Module 12: Memory Protection
+class MemoryModule {
+    riemann_memory::MemoryGuard guard_;
+public:
+    void* alloc(size_t s) { return guard_.allocate(s); }
+    void free(void* p) { guard_.deallocate(p); }
+    bool verify(void* p) { return guard_.verify(p); }
+    bool check_all() { return guard_.check_all_canaries(); }
+};
+
+} // namespace enterprise
