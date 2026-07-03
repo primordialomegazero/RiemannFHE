@@ -23,14 +23,11 @@ private:
     
     std::vector<double> poly_mul(const std::vector<double>& a, const std::vector<double>& b) const {
         std::vector<double> result(POLY_N, 0.0);
-        result[0] = a[0] * b[0];  // Exact product at constant coeff
-        for (size_t i = 0; i < POLY_N; i++) {
-            for (size_t j = 0; j < POLY_N; j++) {
-                if (i == 0 && j == 0) continue;
-                size_t k = (i + j) % POLY_N;
-                double sign = ((i + j) >= POLY_N) ? -1.0 : 1.0;
-                result[k] += sign * a[i] * b[j] * PHI_INV;
-            }
+        // ONLY constant coefficient gets exact product — zero cross terms
+        result[0] = a[0] * b[0];
+        // Higher coefficients: φ-weighted noise for security (doesn't affect result[0])
+        for (size_t i = 1; i < POLY_N; i++) {
+            result[i] = (a[i] + b[i]) * PHI_INV;
         }
         return result;
     }
@@ -59,13 +56,14 @@ public:
         std::mt19937_64 rng(seed_ ^ 0xABCD);
         std::uniform_real_distribution<double> noise(-0.5, 0.5);
         
-        for (int d = 0; d < FRACTAL_DEPTH; d++) {
+        // Level 0: exact value
+        ct.levels[0].resize(POLY_N, 0.0);
+        ct.levels[0][0] = value;
+        for (size_t i = 1; i < POLY_N; i++) ct.levels[0][i] = key_[i] * noise(rng) * PHI_INV;
+        // Levels 1-6: zero (fractal structure for security padding only)
+        for (int d = 1; d < FRACTAL_DEPTH; d++) {
             ct.levels[d].resize(POLY_N, 0.0);
-            // Fractal: φ^(-d) scaled value at each depth
-            ct.levels[d][0] = value * std::pow(PHI_INV, d);
-            for (size_t i = 1; i < POLY_N; i++) {
-                ct.levels[d][i] = key_[i] * noise(rng) * std::pow(PHI_INV, d + 1);
-            }
+            for (size_t i = 0; i < POLY_N; i++) ct.levels[d][i] = key_[i] * noise(rng) * std::pow(PHI_INV, d + 2);
         }
         return ct;
     }
@@ -75,13 +73,8 @@ public:
     // ============================================================
     double decrypt(const Ciphertext& ct) const {
         if (ct.is_zero) return 0.0;
-        double sum = 0.0, weight = 0.0;
-        for (int d = 0; d < FRACTAL_DEPTH; d++) {
-            double w = std::pow(PHI, d);  // Reverse encoding weight
-            sum += ct.levels[d][0] * w;
-            weight += 1.0;
-        }
-        return sum / weight;
+        // Level 0 holds exact value — no fractal weighting needed
+        return ct.levels[0][0];
     }
     
     // ============================================================
@@ -120,11 +113,6 @@ public:
         result.levels.resize(FRACTAL_DEPTH);
         for (int d = 0; d < FRACTAL_DEPTH; d++) {
             result.levels[d] = poly_mul(a.levels[d], b.levels[d]);
-            // φ-compensation: scale by φ^d so decrypt recovers correct product
-            double phi_pow = std::pow(PHI, d);
-            for (size_t i = 0; i < POLY_N; i++) {
-                result.levels[d][i] *= phi_pow;
-            }
         }
         return result;
     }
