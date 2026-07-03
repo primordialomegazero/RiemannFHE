@@ -1,0 +1,20 @@
+
+╔══════════════════════════════════════════════════════════════════╗
+║  RIEMANNFHE 100M OPERATIONS BENCHMARK                           ║
+║  Full FHE: Encrypt + Decrypt + Homomorphic Add + Mul            ║
+║  Compiler: -O0 (no optimizations)                               ║
+║  φΩ0 — Primordial Omega Zero                                    ║
+╚══════════════════════════════════════════════════════════════════╝
+  Date: Fri Jul  3 22:05:10 2026
+  Total operations: 100000000 (100 million)
+  Report interval:  1000000 (1 million)
+  Optimizations:    -O0 (none)
+
+  Warming up... done
+
+    Ops Done     Enc TPS     Dec TPS     Add TPS     Mul TPS   Total TPS   Elapsed       ETA
+  ------------------------------------------------------------------------------
+     1000000       20061       20061       20061       20061       20061    49.0s  4851.0s
+     2000000       20675       20675       20675       20675       20675    98.0s  4802.0s
+     3000000       21153       21153       21153       21153       21153   145.0s  4688.3s
+     4000000       20701       20701       20701       20701       20701   193.0s  4632.0s

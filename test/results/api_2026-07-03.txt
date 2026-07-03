@@ -1,0 +1,24 @@
+Starting API server in serve mode...
+
+╔══════════════════════════════════════════════════════════════╗
+║  API INTEGRATION TESTS (Live Server)                        ║
+╚══════════════════════════════════════════════════════════════╝
+
+  [1] Health check ... ✅ PASS
+  [2] Encrypt ... ✅ PASS
+  [3] Add ... ✅ PASS
+  [4] Multiply ... ✅ PASS
+  [5] Multi-Key Encrypt ... ✅ PASS
+  [6] Riemann Encrypt ... ✅ PASS
+  [7] Benchmark ... ✅ PASS
+  [8] Security Audit ... ✅ PASS
+╔══════════════════════════════════════════════════════════════╗
+║  RiemannFHE API Server — Listening on port 8443             ║
+╚══════════════════════════════════════════════════════════════╝
+
+Server stopped.
+
+══════════════════════════════════════════════════════
+  Tests: 8 | Pass: 8 | Fail: 0
+  ✅ ALL API ENDPOINTS WORKING
+══════════════════════════════════════════════════════
