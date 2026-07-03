@@ -173,9 +173,6 @@ MIT — 2026
 
 ---
 
-*"This repository is dedicated to the advancement of privacy-preserving computation through mathematics, not magic. The implementation reflects the mathematics, and the mathematics reflects reality."*
-
-— φΩ0
 
 ---
 
