@@ -176,3 +176,9 @@ MIT — 2026
 *"This repository is dedicated to the advancement of privacy-preserving computation through mathematics, not magic. The implementation reflects the mathematics, and the mathematics reflects reality."*
 
 — φΩ0
+
+---
+
+> *"When truth is anchored to authority rather than mathematics, progress stops. Gentry proved one path. Mathematics permits many. The math is the only judge — and the math says absolute zero is possible."*
+> 
+> — φΩ0
