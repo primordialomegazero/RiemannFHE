@@ -121,6 +121,8 @@ No `e` term exists. No noise to manage. No bootstrapping needed.
 
 ### Why Post-LWE Security?
 
+*Formal proofs in [docs/FORMAL_PROOFS.md](docs/FORMAL_PROOFS.md), Theorems 3-4.*
+
 - **LWE requires noise:** `b = A·s + e`. Our scheme has `e = 0` — LWE assumption structurally inapplicable.
 - **RLWE requires polynomial ring:** `φ^φ` is transcendental (Hermite-Lindemann theorem) — not in any `Z[x]/(f(x))`.
 - **Lattice attacks require Euclidean metric:** Our hyperbolic geometry has no unique "shortest vector."
