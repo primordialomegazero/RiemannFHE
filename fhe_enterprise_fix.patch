@@ -1,0 +1,20 @@
+--- a/fhe_enterprise.hpp
++++ b/fhe_enterprise.hpp
+@@ -12,6 +12,8 @@
+ #include <sstream>
+ #include <fstream>
++#include <vector>
++#include <complex>
+ 
+ // ============================================================
+ // 1. CONSTANT-TIME OPERATIONS
+@@ -79,7 +81,8 @@ enum class ErrorCode : uint32_t {
+ 
+ class SecureError : public std::exception {
+     ErrorCode code_;
+-    const char* what() const noexcept override {
++public:
++    const char* what() const noexcept override final {
+         // Generic message only — no internal state leaked
+         return "Security operation failed";
+     }
