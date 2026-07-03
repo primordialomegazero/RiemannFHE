@@ -1,0 +1,9 @@
+═══ 100M FINAL REPORT ═══
+Total operations: 100,000,000
+Total adds:       50,000,000
+Total muls:       50,000,000
+Total time:       2108.7s (35.1 minutes)
+Overall TPS:      47,423
+Final noise:      0.0e+00
+Errors:           0
+Extraction:       ZERO (direct ciphertext only)
